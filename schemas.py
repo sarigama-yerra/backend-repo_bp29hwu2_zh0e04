@@ -1,48 +1,55 @@
 """
-Database Schemas
+Database Schemas for Quit Smoking Gamified App
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection. The collection name
+is the lowercase of the class name.
 """
-
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
+from datetime import date, datetime
 
-# Example schemas (replace with your own):
-
-class User(BaseModel):
+class Userprofile(BaseModel):
     """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Collection: userprofile
+    Stores a user's quit plan and economic parameters to compute savings
     """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    name: str = Field(..., description="User display name")
+    quit_date: date = Field(..., description="Target quit date (start of smoke-free period)")
+    daily_cig_before: int = Field(..., ge=0, le=100, description="Average cigarettes per day before quitting")
+    price_per_pack: float = Field(..., ge=0, description="Price per pack in user's currency")
+    cigs_per_pack: int = Field(20, ge=1, le=40, description="Cigarettes per pack")
+    currency: str = Field("$", description="Currency symbol for UI")
 
-class Product(BaseModel):
+class Checkin(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Collection: checkin
+    One per day per user; cigarettes_count=0 awards streak progress
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    user_id: str = Field(..., description="User id (stringified ObjectId)")
+    date: date = Field(..., description="Calendar date of this check-in (UTC)")
+    cigarettes_count: int = Field(0, ge=0, le=200, description="Number of cigarettes smoked on this date")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Craving(BaseModel):
+    """
+    Collection: craving
+    Track craving episodes for insights and coping strategies
+    """
+    user_id: str = Field(..., description="User id (stringified ObjectId)")
+    intensity: int = Field(..., ge=1, le=5, description="Craving intensity 1-5")
+    trigger: Optional[str] = Field(None, description="Trigger such as stress, coffee, social, alcohol")
+    note: Optional[str] = Field(None, description="Optional note or coping action")
+    occurred_at: Optional[datetime] = Field(None, description="When it happened; defaults to now")
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Badge(BaseModel):
+    """
+    Collection: badge
+    Awarded achievements for motivation
+    """
+    user_id: str = Field(..., description="User id (stringified ObjectId)")
+    key: str = Field(..., description="Unique badge key, e.g., streak_7, first_day, savings_50")
+    name: str = Field(..., description="Badge display name")
+    description: str = Field(..., description="What the user achieved")
+    icon: str = Field("⭐", description="Simple icon or emoji for UI")
+    awarded_at: datetime = Field(..., description="When awarded")
+
+# Tip: The /schema endpoint in the backend can read these models if needed.
